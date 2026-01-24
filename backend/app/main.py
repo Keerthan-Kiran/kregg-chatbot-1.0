@@ -3,26 +3,20 @@ from app.db import models
 from dotenv import load_dotenv
 load_dotenv()
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-import openai
+from fastapi.responses import JSONResponse
 import uvicorn
 import os
-
-import logging
-from fastapi import Request
-from fastapi.responses import JSONResponse
-
 import time
+import logging
+
 from app.db.database import SessionLocal
 from app.db.crud import log_request
 
 # ===============================
 # CONFIG
 # ===============================
-openai.api_key = os.getenv("OPENAI_API_KEY")
-
 SYSTEM_PROMPT = """
 You are a professional AI customer support assistant for KREGG AI.
 
@@ -34,7 +28,7 @@ Rules:
 - Keep responses concise and clear.
 - End every response by asking if the user needs further help.
 """
-Base.metadata.create_all(bind=engine)
+
 # ===============================
 # APP SETUP
 # ===============================
@@ -45,17 +39,25 @@ app = FastAPI(
     version="1.0.0"
 )
 
+# ✅ FIXED CORS (Vercel compatible)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000"
-    ],
+    allow_origins=["*"],  # restrict later
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+# ===============================
+# STARTUP
+# ===============================
+@app.on_event("startup")
+def on_startup():
+    Base.metadata.create_all(bind=engine)
+
+# ===============================
+# ERROR HANDLING
+# ===============================
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     logger.exception(f"Unhandled error: {request.url}")
@@ -76,10 +78,9 @@ def health():
     return {"status": "healthy"}
 
 # ===============================
-# CHAT LOGIC (LLM)
+# OPENAI
 # ===============================
 from openai import OpenAI
-
 client = OpenAI()
 
 def generate_reply(user_message: str) -> str:
@@ -93,9 +94,7 @@ def generate_reply(user_message: str) -> str:
             temperature=0.4,
             max_tokens=300,
         )
-
         return response.choices[0].message.content.strip()
-
     except Exception as e:
         print("OPENAI ERROR:", e)
         return (
@@ -104,10 +103,18 @@ def generate_reply(user_message: str) -> str:
             "Can I help you with anything else?"
         )
 
+# ===============================
+# ROUTERS
+# ===============================
 from app.chat.router import router as chat_router
+from app.analytics.router import router as analytics_router
 
 app.include_router(chat_router)
+app.include_router(analytics_router)
 
+# ===============================
+# ANALYTICS MIDDLEWARE
+# ===============================
 @app.middleware("http")
 async def analytics_middleware(request: Request, call_next):
     start = time.time()
@@ -142,16 +149,12 @@ async def analytics_middleware(request: Request, call_next):
 
     return response
 
-from app.analytics.router import router as analytics_router
-app.include_router(analytics_router)
-
-
 # ===============================
-# RUN
+# LOCAL RUN ONLY
 # ===============================
 if __name__ == "__main__":
-    uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)
-
-
-
-
+    uvicorn.run(
+        "app.main:app",
+        host="0.0.0.0",
+        port=int(os.getenv("PORT", 8000)),
+    )
