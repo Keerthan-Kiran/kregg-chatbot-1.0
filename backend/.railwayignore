@@ -1,0 +1,11 @@
+node_modules
+.next
+frontend
+.env
+venv
+.venv
+__pycache__
+.git
+.gitignore
+tests
+docs
