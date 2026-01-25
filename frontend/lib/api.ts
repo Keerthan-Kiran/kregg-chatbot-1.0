@@ -1,4 +1,4 @@
-const API_BASE = "https://gentle-stillness-production-6aeb.up.railway.app";
+const API_BASE = "https://gentle-stillness-production-b30c.up.railway.app";
 const API_KEY = "kregg_live_test_123"; // 🔑 same key as DB
 
 const SESSION_KEY = "kregg_chat_session_id";
