@@ -10,6 +10,7 @@ export async function sendMessageStream(
 ) {
   const response = await fetch(`${API_BASE}/chat/stream`, {
     method: "POST",
+    mode: "cors", // ✅ IMPORTANT
     headers: {
       "Content-Type": "application/json",
       "x-api-key": API_KEY,
@@ -22,20 +23,23 @@ export async function sendMessageStream(
     }),
   });
 
-  if (!response.ok) {
+  if (!response.ok || !response.body) {
     const err = await response.text();
     console.error("Backend error:", err);
     throw new Error("Chat request failed");
   }
 
-  // backend returns TEXT, not JSON
-  const replyText = await response.text();
-
-  if (!replyText) {
-    throw new Error("Empty response from backend");
+  const newSessionId = response.headers.get("x-session-id");
+  if (newSessionId) {
+    localStorage.setItem(SESSION_KEY, newSessionId);
   }
 
-  if (onToken) {
-    onToken(replyText);
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    onToken?.(decoder.decode(value));
   }
 }
