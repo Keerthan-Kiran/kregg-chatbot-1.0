@@ -3,7 +3,7 @@ from app.db import models
 from dotenv import load_dotenv
 load_dotenv()
 
-from fastapi import FastAPI,Request
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import uvicorn
@@ -117,12 +117,18 @@ def health():
     return {"status": "healthy"}
 
 # ===============================
-# ANALYTICS MIDDLEWARE
+# ANALYTICS MIDDLEWARE (FIXED)
 # ===============================
 @app.middleware("http")
 async def analytics_middleware(request: Request, call_next):
     if request.url.path == "/health":
         return await call_next(request)
+
+    start_time = time.time()
+
+    response = await call_next(request)
+
+    duration_ms = int((time.time() - start_time) * 1000)
 
     tenant_name = None
     api_key = request.headers.get("x-api-key")
