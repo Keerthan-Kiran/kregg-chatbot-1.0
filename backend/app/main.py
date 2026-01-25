@@ -6,7 +6,6 @@ load_dotenv()
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
 import uvicorn
 import os
 import time
@@ -30,32 +29,21 @@ Rules:
 - End every response by asking if the user needs further help.
 """
 
-# ===============================
-# APP SETUP
-# ===============================
 logger = logging.getLogger("kregg")
 
+# ===============================
+# APP SETUP (ONLY ONCE ✅)
+# ===============================
 app = FastAPI(
     title="KREGG AI Chatbot Backend",
     version="1.0.0"
 )
 
-# ✅ FIXED CORS (Vercel compatible)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # restrict later
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-app = FastAPI()
-
+# ✅ CORRECT CORS FOR VERCEL + STREAMING
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "https://kregg-chatbot-100.vercel.app",
-        "https://kregg-chatbot-100.vercel.app/",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -64,8 +52,10 @@ app.add_middleware(
         "x-api-key",
         "x-session-id",
     ],
+    expose_headers=[
+        "x-session-id",   # 🔥 REQUIRED FOR BROWSER
+    ],
 )
-
 
 # ===============================
 # STARTUP
@@ -74,7 +64,6 @@ app.add_middleware(
 def on_startup():
     Base.metadata.create_all(bind=engine)
 
-    # 🔐 Ensure default tenant exists (NO SHELL REQUIRED)
     default_name = os.getenv("DEFAULT_TENANT_NAME")
     default_key = os.getenv("DEFAULT_API_KEY")
 
@@ -83,15 +72,11 @@ def on_startup():
         try:
             tenant = db.query(Tenant).filter(Tenant.api_key == default_key).first()
             if not tenant:
-                db.add(Tenant(
-                    name=default_name,
-                    api_key=default_key
-                ))
+                db.add(Tenant(name=default_name, api_key=default_key))
                 db.commit()
                 logger.info("✅ Default tenant created")
         finally:
             db.close()
-
 
 # ===============================
 # HEALTH
@@ -123,7 +108,7 @@ def generate_reply(user_message: str) -> str:
         )
         return response.choices[0].message.content.strip()
     except Exception as e:
-        print("OPENAI ERROR:", e)
+        logger.error(f"OPENAI ERROR: {e}")
         return (
             "I’m sorry, I’m having trouble responding right now. "
             "Please try again shortly. "
@@ -139,12 +124,8 @@ from app.analytics.router import router as analytics_router
 app.include_router(chat_router)
 app.include_router(analytics_router)
 
-@app.get("/health", include_in_schema=False)
-def health():
-    return {"status": "healthy"}
-
 # ===============================
-# ANALYTICS MIDDLEWARE (FIXED)
+# ANALYTICS MIDDLEWARE
 # ===============================
 @app.middleware("http")
 async def analytics_middleware(request: Request, call_next):
@@ -152,9 +133,7 @@ async def analytics_middleware(request: Request, call_next):
         return await call_next(request)
 
     start_time = time.time()
-
     response = await call_next(request)
-
     duration_ms = int((time.time() - start_time) * 1000)
 
     tenant_name = None
@@ -163,7 +142,6 @@ async def analytics_middleware(request: Request, call_next):
     if api_key:
         db = SessionLocal()
         try:
-            from app.db.models import Tenant
             tenant = db.query(Tenant).filter(Tenant.api_key == api_key).first()
             if tenant:
                 tenant_name = tenant.name
@@ -186,7 +164,7 @@ async def analytics_middleware(request: Request, call_next):
     return response
 
 # ===============================
-# LOCAL RUN ONLY
+# LOCAL RUN
 # ===============================
 if __name__ == "__main__":
     uvicorn.run(
