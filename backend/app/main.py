@@ -1,5 +1,6 @@
 from app.db.database import engine, Base
 from app.db import models
+from app.db.models import Tenant
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -55,16 +56,24 @@ app.add_middleware(
 def on_startup():
     Base.metadata.create_all(bind=engine)
 
-# ===============================
-# ERROR HANDLING
-# ===============================
-@app.exception_handler(Exception)
-async def global_exception_handler(request: Request, exc: Exception):
-    logger.exception(f"Unhandled error: {request.url}")
-    return JSONResponse(
-        status_code=500,
-        content={"detail": "Internal server error"},
-    )
+    # 🔐 Ensure default tenant exists (NO SHELL REQUIRED)
+    default_name = os.getenv("DEFAULT_TENANT_NAME")
+    default_key = os.getenv("DEFAULT_API_KEY")
+
+    if default_name and default_key:
+        db = SessionLocal()
+        try:
+            tenant = db.query(Tenant).filter(Tenant.api_key == default_key).first()
+            if not tenant:
+                db.add(Tenant(
+                    name=default_name,
+                    api_key=default_key
+                ))
+                db.commit()
+                logger.info("✅ Default tenant created")
+        finally:
+            db.close()
+
 
 # ===============================
 # HEALTH
