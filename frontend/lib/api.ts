@@ -13,6 +13,7 @@ export async function sendMessageStream(
     headers: {
       "Content-Type": "application/json",
       "x-api-key": API_KEY,
+      ...(sessionId ? { "x-session-id": sessionId } : {}),
     },
     body: JSON.stringify({
       message,
@@ -21,21 +22,20 @@ export async function sendMessageStream(
     }),
   });
 
-  if (!response.ok || !response.body) {
+  if (!response.ok) {
     const err = await response.text();
     console.error("Backend error:", err);
     throw new Error("Chat request failed");
   }
 
-  // backend sends text/plain
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
+  // backend returns TEXT, not JSON
+  const replyText = await response.text();
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
+  if (!replyText) {
+    throw new Error("Empty response from backend");
+  }
 
-    const chunk = decoder.decode(value);
-    if (chunk && onToken) onToken(chunk);
+  if (onToken) {
+    onToken(replyText);
   }
 }
