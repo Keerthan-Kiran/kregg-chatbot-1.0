@@ -112,14 +112,17 @@ from app.analytics.router import router as analytics_router
 app.include_router(chat_router)
 app.include_router(analytics_router)
 
+@app.get("/health", include_in_schema=False)
+def health():
+    return {"status": "healthy"}
+
 # ===============================
 # ANALYTICS MIDDLEWARE
 # ===============================
 @app.middleware("http")
 async def analytics_middleware(request: Request, call_next):
-    start = time.time()
-    response = await call_next(request)
-    duration_ms = int((time.time() - start) * 1000)
+    if request.url.path == "/health":
+        return await call_next(request)
 
     tenant_name = None
     api_key = request.headers.get("x-api-key")
