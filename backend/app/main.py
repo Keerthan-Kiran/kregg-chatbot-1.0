@@ -49,6 +49,22 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://kregg-chatbot-100.vercel.app",
+        "https://kregg-chatbot-100-git-main-keerthan-kiran-ss-projects.vercel.app",
+        "http://localhost:3000",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["x-session-id"],
+)
+
+
 # ===============================
 # STARTUP
 # ===============================
