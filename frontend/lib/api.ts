@@ -10,7 +10,6 @@ export async function sendMessageStream(
 ) {
   const response = await fetch(`${API_BASE}/chat/stream`, {
     method: "POST",
-    mode: "cors",
     headers: {
       "Content-Type": "application/json",
       "x-api-key": API_KEY,

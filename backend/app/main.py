@@ -45,7 +45,7 @@ app.add_middleware(
     allow_origins=[
         "https://kregg-chatbot-100.vercel.app",
     ],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=[
         "Content-Type",
