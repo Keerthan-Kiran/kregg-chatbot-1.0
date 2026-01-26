@@ -18,8 +18,9 @@ export default function ChatBox() {
   const [loading, setLoading] = useState(false);
 
   const bottomRef = useRef<HTMLDivElement | null>(null);
+  const hasMountedRef = useRef(false);
 
-  /* ✅ Auto greeting (enterprise-style) */
+  /* ✅ Enterprise greeting (visible on open) */
   useEffect(() => {
     setMessages([
       {
@@ -30,7 +31,12 @@ export default function ChatBox() {
     ]);
   }, []);
 
+  /* ✅ Scroll ONLY after first user interaction */
   useEffect(() => {
+    if (!hasMountedRef.current) {
+      hasMountedRef.current = true;
+      return;
+    }
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
@@ -92,8 +98,8 @@ export default function ChatBox() {
 
   return (
     <div className="flex flex-col h-[560px] w-full bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+      {/* Messages (ONLY scrollable area) */}
+      <div className="flex-1 overflow-y-auto px-4 py-5 space-y-4 bg-gray-50">
         {messages.map((m, i) => (
           <MessageBubble
             key={i}
@@ -129,6 +135,7 @@ export default function ChatBox() {
             ➤
           </button>
         </div>
+
         <div className="text-center mt-2">
           <span className="text-[10px] text-gray-400">
             Powered by KREGG AI
