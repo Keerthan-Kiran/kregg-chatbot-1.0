@@ -43,7 +43,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://kregg-chatbot-1-0.vercel.app",
+        "https://kregg-chatbot-10.vercel.app",
         "https://kregg-chatbot-100.vercel.app",
     ],
     allow_credentials=True,
