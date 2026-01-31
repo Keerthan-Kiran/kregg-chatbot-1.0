@@ -22,7 +22,7 @@ export async function sendMessageStream(
   });
 
   if (!response.ok) {
-    throw new Error("Chat request failed");
+    throw new Error(`Chat request failed: ${response.status}`);
   }
 
   const newSessionId = response.headers.get("x-session-id");
@@ -30,16 +30,15 @@ export async function sendMessageStream(
     localStorage.setItem(SESSION_KEY, newSessionId);
   }
 
-  // ✅ DO NOT validate streamed text
   const replyText = await response.text();
 
-  // ✅ Safely handle empty / delayed responses
-  if (onToken && replyText) {
-    let i = 0;
-    const interval = setInterval(() => {
-      onToken(replyText[i]);
-      i++;
-      if (i >= replyText.length) clearInterval(interval);
-    }, 15);
+  // 🔥 HARD GUARANTEE UI GETS CONTENT
+  if (!replyText || replyText.trim().length === 0) {
+    throw new Error("Empty reply from backend");
+  }
+
+  // 🔥 Deliver immediately (no fake streaming bugs)
+  if (onToken) {
+    onToken(replyText);
   }
 }
