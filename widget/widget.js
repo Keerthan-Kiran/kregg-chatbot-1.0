@@ -4,20 +4,12 @@
   const SESSION_KEY = "kregg_widget_session_id";
 
   let isOpen = false;
-  let hasGreeted = false;
 
   function toggleWidget() {
     isOpen = !isOpen;
-    const chatWindow = document.getElementById("kregg-chat-window");
-    chatWindow.style.display = isOpen ? "flex" : "none";
-
-    if (isOpen && !hasGreeted) {
-      hasGreeted = true;
-      appendMessage(
-        "Hello! I'm the KREGG AI Assistant. How can I help you today?",
-        "bot"
-      );
-    }
+    document.getElementById("kregg-chat-window").style.display = isOpen
+      ? "flex"
+      : "none";
   }
 
   function appendMessage(text, role) {
@@ -224,5 +216,10 @@
   );
 
   // Initial greeting
-
+  setTimeout(() => {
+    appendMessage(
+      "Hello! I'm the KREGG AI Assistant. How can I help you today?",
+      "bot"
+    );
+  }, 300);
 })();
