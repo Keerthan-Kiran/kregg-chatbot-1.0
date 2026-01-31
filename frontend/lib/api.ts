@@ -1,5 +1,6 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL!;
 const API_KEY = "kregg_live_test_123";
+
 const SESSION_KEY = "kregg_chat_session_id";
 
 export async function sendMessageStream(
@@ -22,23 +23,27 @@ export async function sendMessageStream(
   });
 
   if (!response.ok) {
-    throw new Error(`Chat request failed: ${response.status}`);
+    const err = await response.text();
+    console.error("Backend error:", err);
+    throw new Error("Chat request failed");
   }
 
+  // store rotated session id
   const newSessionId = response.headers.get("x-session-id");
   if (newSessionId) {
     localStorage.setItem(SESSION_KEY, newSessionId);
   }
 
+  // 🔥 BACKEND RETURNS PLAIN TEXT
   const replyText = await response.text();
 
-  // 🔥 HARD GUARANTEE UI GETS CONTENT
-  if (!replyText || replyText.trim().length === 0) {
+  if (!replyText) {
     throw new Error("Empty reply from backend");
   }
 
-  // 🔥 Deliver immediately (no fake streaming bugs)
+  // simulate streaming for UI
   if (onToken) {
     onToken(replyText);
   }
 }
+
