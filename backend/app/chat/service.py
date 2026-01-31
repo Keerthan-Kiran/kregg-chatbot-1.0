@@ -27,27 +27,18 @@ def process_chat_message(
     message: str,
     tenant_name: str,
     session_id: Optional[UUID] = None,
-):
+) -> str:
     db: Session = SessionLocal()
     full_reply = ""
     token_count = 0
 
     try:
         tenant_id = get_or_create_tenant(db, tenant_name)
-
-        # ✅ COUNT REQUEST
         increment_tenant_requests(db, tenant_id)
 
         valid_session_id = get_valid_session(db, session_id)
-
         if valid_session_id is None:
             session_id = create_chat_session(db, tenant_id)
-            save_message(
-                db,
-                session_id,
-                "assistant",
-                "Session expired. Please continue."
-            )
         else:
             session_id = valid_session_id
 
@@ -62,32 +53,24 @@ def process_chat_message(
                     tokens = estimate_tokens(token)
                     token_count += tokens
 
-                    # ❌ SESSION TOKEN LIMIT
                     if token_count > MAX_SESSION_TOKENS:
-                        yield "\n\n⚠️ Token limit reached for this session."
-                        save_message(
-                            db,
-                            session_id,
-                            "assistant",
-                            full_reply + "\n\n[Token limit reached]"
-                        )
-                        return
+                        full_reply += "\n\n⚠️ Token limit reached."
+                        break
 
-                    # ✅ STREAM + TRACK TOKENS
                     full_reply += token
                     increment_tenant_tokens(db, tenant_id, tokens)
-                    yield token
 
                 save_message(db, session_id, "assistant", full_reply)
-                return
+                return full_reply
 
             except Exception:
                 if attempt < MAX_RETRIES - 1:
                     time.sleep(RETRY_DELAY)
 
-        raise RuntimeError("LLM failed")
+        return "Sorry, I couldn’t generate a response right now."
 
     except Exception:
-        yield "Sorry, something went wrong. Please try again."
+        return "Sorry, something went wrong. Please try again."
+
     finally:
         db.close()
