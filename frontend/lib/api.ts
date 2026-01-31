@@ -37,9 +37,11 @@ export async function sendMessageStream(
   // 🔥 BACKEND RETURNS PLAIN TEXT
   const replyText = await response.text();
 
-  if (!replyText) {
-    throw new Error("Empty reply from backend");
+  // ✅ allow whitespace / newline responses
+  if (replyText.trim().length === 0) {
+      throw new Error("Empty reply from backend");
   }
+
 
   // simulate streaming for UI
   if (onToken) {
