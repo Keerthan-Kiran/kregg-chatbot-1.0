@@ -55,7 +55,7 @@ export default function ChatBox() {
     setMessages((prev) => [
       ...prev,
       { role: "user", content: userMessage },
-      { role: "bot", content: token , typing: false },
+      { role: "bot", content: "" , typing: true },
     ]);
 
     try {
