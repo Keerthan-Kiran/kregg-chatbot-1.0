@@ -4,8 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import MessageBubble from "./MessageBubble";
 import { sendMessageStream } from "@/lib/api";
 
+const SESSION_KEY = "kregg_chat_session_id";
+
 type ChatMessage = {
-  role: "user" | "bot";
+  role: "user" | "bot" | "system";
   content: string;
   typing?: boolean;
 };
@@ -15,28 +17,32 @@ export default function ChatBox() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const messagesRef = useRef<HTMLDivElement>(null);
-  const hasGreetedRef = useRef(false);
+  const bottomRef = useRef<HTMLDivElement | null>(null);
+  const hasMountedRef = useRef(false);
+  const sessionIdRef = useRef<string | null>(null);
 
-  /* ✅ Greeting – ALWAYS visible */
+  /* Load session */
   useEffect(() => {
-    if (!hasGreetedRef.current) {
-      hasGreetedRef.current = true;
-      setMessages([
-        {
-          role: "bot",
-          content: "Hello! I'm the KREGG AI Assistant. How can I help you today?",
-        },
-      ]);
-    }
+    sessionIdRef.current = localStorage.getItem(SESSION_KEY);
   }, []);
 
-  /* ✅ Scroll AFTER render */
+  /* Initial greeting */
   useEffect(() => {
-    messagesRef.current?.scrollTo({
-      top: messagesRef.current.scrollHeight,
-      behavior: "smooth",
-    });
+    setMessages([
+      {
+        role: "bot",
+        content: "Hello! I'm the KREGG AI Assistant. How can I help you today?",
+      },
+    ]);
+  }, []);
+
+  /* Auto-scroll after first render */
+  useEffect(() => {
+    if (!hasMountedRef.current) {
+      hasMountedRef.current = true;
+      return;
+    }
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   const handleSend = async () => {
@@ -53,24 +59,40 @@ export default function ChatBox() {
     ]);
 
     try {
-      await sendMessageStream(userMessage, undefined, (reply) => {
-        setMessages((prev) => {
-          const updated = [...prev];
-          updated[updated.length - 1] = {
-            role: "bot",
-            content: reply,
-          };
-          return updated;
-        });
-      });
+      await sendMessageStream(
+        userMessage,
+        sessionIdRef.current ?? undefined,
+        (token) => {
+          if (!token) return;
+
+          setMessages((prev) => {
+            const updated = [...prev];
+            const lastIndex = updated.length - 1;
+
+            if (updated[lastIndex]?.typing) {
+              updated[lastIndex] = {
+                role: "bot",
+                content: token,
+                typing: false,
+              };
+            } else {
+              updated[lastIndex].content += token;
+            }
+
+            return updated;
+          });
+        }
+      );
     } catch {
       setMessages((prev) => {
-        const updated = [...prev];
-        updated[updated.length - 1] = {
-          role: "bot",
-          content: "Sorry, something went wrong. Please try again.",
-        };
-        return updated;
+        const cleaned = prev.filter((m) => !m.typing);
+        return [
+          ...cleaned,
+          {
+            role: "bot",
+            content: "Sorry, something went wrong. Please try again.",
+          },
+        ];
       });
     } finally {
       setLoading(false);
@@ -78,39 +100,52 @@ export default function ChatBox() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-white overflow-hidden">
-      {/* Messages (ONLY scrollbar) */}
-      <div
-        ref={messagesRef}
-        className="flex-1 overflow-y-auto px-4 py-5 space-y-4 bg-gray-50"
-      >
+    /* 🔒 iframe-safe full height */
+    <div className="flex flex-col h-screen bg-white overflow-hidden">
+      {/* Messages */}
+      <div className="flex-1 min-h-0 overflow-y-auto px-4 py-5 space-y-4 bg-gray-50">
         {messages.map((m, i) => (
-          <MessageBubble key={i} message={m.content} isUser={m.role === "user"} typing={m.typing} />
+          <MessageBubble
+            key={i}
+            message={m.content}
+            isUser={m.role === "user"}
+            typing={m.typing}
+          />
         ))}
+        <div ref={bottomRef} />
       </div>
 
-      {/* Input */}
-      <div className="border-t bg-white p-3">
-        <div className="flex gap-2">
-          <input
-            className="flex-1 rounded-full bg-gray-100 px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500"
-            placeholder="Type your message..."
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSend()}
-          />
-          <button
-            onClick={handleSend}
-            disabled={loading}
-            className="h-10 w-10 rounded-full bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
-          >
-            ➤
-          </button>
-        </div>
+      {/* Input (LOCKED BOTTOM) */}
+      <div className="shrink-0 bg-white border-t">
+        <div className="p-3">
+          <div className="flex items-end gap-2">
+            <input
+              className="flex-1 rounded-full bg-gray-100 px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+              placeholder="Type your message..."
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !loading) {
+                  e.preventDefault();
+                  handleSend();
+                }
+              }}
+              disabled={loading}
+            />
 
-        <p className="text-center text-[10px] text-gray-400 mt-2">
-          Powered by KREGG AI
-        </p>
+            <button
+              onClick={handleSend}
+              disabled={loading}
+              className="h-10 w-10 rounded-full bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center"
+            >
+              ➤
+            </button>
+          </div>
+
+          <p className="text-center text-[10px] text-gray-400 mt-2">
+            Powered by KREGG AI
+          </p>
+        </div>
       </div>
     </div>
   );
