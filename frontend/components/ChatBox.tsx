@@ -77,24 +77,24 @@ export default function ChatBox() {
       setLoading(false);
     }
   };
+return (
+  <div className="flex flex-col h-full bg-white overflow-hidden">
+    {/* Messages */}
+    <div className="flex-1 overflow-y-auto px-4 py-5 space-y-4 bg-gray-50">
+      {messages.map((m, i) => (
+        <MessageBubble
+          key={i}
+          message={m.content}
+          isUser={m.role === "user"}
+          typing={m.typing}
+        />
+      ))}
+      <div ref={bottomRef} />
+    </div>
 
-  return (
-    <div className="flex flex-col h-full bg-white">
-      {/* Messages (ONLY scrollbar) */}
-      <div className="flex-1 overflow-y-auto px-4 py-5 space-y-4 bg-gray-50">
-        {messages.map((m, i) => (
-          <MessageBubble
-            key={i}
-            message={m.content}
-            isUser={m.role === "user"}
-            typing={m.typing}
-          />
-        ))}
-        <div ref={bottomRef} />
-      </div>
-
-      {/* Input */}
-      <div className="p-3 bg-white border-t">
+    {/* Input */}
+    <div className="shrink-0 sticky bottom-0 bg-white border-t">
+      <div className="p-3">
         <div className="flex items-end gap-2">
           <input
             className="flex-1 rounded-full bg-gray-100 px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500"
@@ -106,15 +106,58 @@ export default function ChatBox() {
           <button
             onClick={handleSend}
             disabled={loading}
-            className="h-10 w-10 rounded-full bg-blue-600 text-white hover:bg-blue-700"
+            className="h-10 w-10 rounded-full bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
           >
             ➤
           </button>
         </div>
+
         <p className="text-center text-[10px] text-gray-400 mt-2">
           Powered by KREGG AI
         </p>
       </div>
     </div>
-  );
-}
+  </div>
+);
+
+
+//   return (
+//     <div className="flex flex-col h-full bg-white">
+//       {/* Messages (ONLY scrollbar) */}
+//       <div className="flex-1 overflow-y-auto px-4 py-5 space-y-4 bg-gray-50">
+//         {messages.map((m, i) => (
+//           <MessageBubble
+//             key={i}
+//             message={m.content}
+//             isUser={m.role === "user"}
+//             typing={m.typing}
+//           />
+//         ))}
+//         <div ref={bottomRef} />
+//       </div>
+//
+//       {/* Input */}
+//       <div className="p-3 bg-white border-t">
+//         <div className="flex items-end gap-2">
+//           <input
+//             className="flex-1 rounded-full bg-gray-100 px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+//             placeholder="Type your message..."
+//             value={input}
+//             onChange={(e) => setInput(e.target.value)}
+//             onKeyDown={(e) => e.key === "Enter" && handleSend()}
+//           />
+//           <button
+//             onClick={handleSend}
+//             disabled={loading}
+//             className="h-10 w-10 rounded-full bg-blue-600 text-white hover:bg-blue-700"
+//           >
+//             ➤
+//           </button>
+//         </div>
+//         <p className="text-center text-[10px] text-gray-400 mt-2">
+//           Powered by KREGG AI
+//         </p>
+//       </div>
+//     </div>
+//   );
+// }
