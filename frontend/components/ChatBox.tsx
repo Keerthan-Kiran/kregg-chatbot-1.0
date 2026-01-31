@@ -95,7 +95,7 @@ export default function ChatBox() {
 
       {/* Input */}
       <div className="p-3 bg-white border-t">
-        <div className="flex items-center gap-2">
+        <div className="flex items-end gap-2">
           <input
             className="flex-1 rounded-full bg-gray-100 px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500"
             placeholder="Type your message..."
