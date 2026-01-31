@@ -23,7 +23,6 @@
 
     bubble.innerText = text;
     messagesEl.appendChild(bubble);
-
     messagesEl.scrollTop = messagesEl.scrollHeight;
   }
 
@@ -53,21 +52,27 @@
         body: JSON.stringify({ message }),
       });
 
-      if (!response.ok) throw new Error("Request failed");
+      if (!response.ok) {
+        throw new Error(`Request failed: ${response.status}`);
+      }
 
       const newSessionId = response.headers.get("x-session-id");
       if (newSessionId) {
         localStorage.setItem(SESSION_KEY, newSessionId);
       }
 
-      const data = await response.json();
+      // 🔥 BACKEND RETURNS PLAIN TEXT
+      const replyText = await response.text();
 
       typingEl.remove();
       appendMessage(
-        data.reply || "Sorry, I couldn't generate a response.",
+        replyText && replyText.trim().length > 0
+          ? replyText
+          : "Sorry, I couldn't generate a response.",
         "bot"
       );
     } catch (err) {
+      console.error("KREGG widget error:", err);
       typingEl.remove();
       appendMessage(
         "Sorry, something went wrong. Please try again.",
@@ -78,7 +83,9 @@
 
   window.sendKreggMessage = sendMessage;
 
+  // =====================
   // Inject styles
+  // =====================
   document.head.insertAdjacentHTML(
     "beforeend",
     `
@@ -191,7 +198,9 @@
     `
   );
 
+  // =====================
   // Inject HTML
+  // =====================
   document.body.insertAdjacentHTML(
     "beforeend",
     `
