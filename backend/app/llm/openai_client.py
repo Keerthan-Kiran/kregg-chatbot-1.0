@@ -22,7 +22,7 @@ Rules:
 
 def stream_llm(prompt: str):
     stream = client.chat.completions.create(
-        model="gpt-4o-mini",
+        model="gpt-3.5-turbo",
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": prompt}
